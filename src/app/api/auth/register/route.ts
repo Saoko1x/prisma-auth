@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from 'bcrypt';
 import db from '@/libs/db';
 
 export async function POST(request: NextRequest){
   const data = await request.json();
-
+  
   
   const userFound = await db.user.findUnique({
     where:{
@@ -17,8 +18,29 @@ export async function POST(request: NextRequest){
       status: 400
   });
   }
-  console.log(data);
+
+  const usernameFound = await db.user.findUnique({
+    where:{
+      username: data.username
+    }
+  });
+
+  if(usernameFound){
+    return NextResponse.json({
+      message: 'Username already exists'
+    }, {
+      status: 400
+  });
+}
+  
+  const hashedPassword = await bcrypt.hash(data.password, 10);
   const newUser = await db.user.create({
-    data});
-  return NextResponse.json(newUser);
+    data: {
+      username: data.username,
+      email: data.email,
+      password: hashedPassword,
+    },
+  });
+  const { password: _, ...user } = newUser;
+  return NextResponse.json(user);
 }
